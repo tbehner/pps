@@ -1,10 +1,10 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use scraper::{Html, Selector};
-use pipsearch;
+use pypi_search;
 
 fn bench_query() {
      let rt = tokio::runtime::Runtime::new().unwrap();
-     rt.block_on(pipsearch::query_pypi(3)).unwrap();
+     rt.block_on(pypi_search::query_pypi("gitlab", 3)).unwrap();
 }
 
 fn criterion_benchmark(c: &mut Criterion) {

@@ -4,6 +4,7 @@ use lazy_static::lazy_static;
 use scraper::{Html, Selector, ElementRef};
 use tokio::sync::mpsc;
 use anyhow::Result;
+use tabled::Tabled;
 
 lazy_static! {
     static ref NAME_SELECTOR: Selector = Selector::parse("span.package-snippet__name").unwrap();
@@ -24,12 +25,21 @@ fn unwrap_time_selector(input: &ElementRef) -> Option<DateTime<Utc>> {
         .and_then(|dt| dt.parse::<DateTime<Utc>>().ok())
 }
 
-#[derive(Debug)]
+fn format_date(release: &DateTime<Utc>) -> String {
+    release.format("%Y-%m-%d").to_string()
+}
+
+#[derive(Debug,Tabled)]
 pub struct Package {
-    name: String,
-    version: String,
-    release: DateTime<Utc>,
-    description: String,
+    #[header("Name")]
+    pub name: String,
+    #[header("Version")]
+    pub version: String,
+    #[header("Released")]
+    #[field(display_with="format_date")]
+    pub release: DateTime<Utc>,
+    #[header("Description")]
+    pub description: String,
 }
 
 impl From<&ElementRef<'_>> for Package {
@@ -44,7 +54,8 @@ impl From<&ElementRef<'_>> for Package {
     }
 }
 
-pub async fn query_pypi(pages: usize) -> Result<Vec<Package>>{
+
+pub async fn query_pypi(name: String, pages: usize) -> Result<Vec<Package>>{
     let client = reqwest::Client::new();
     let (tx, mut rx) = mpsc::channel(32);
 
@@ -52,14 +63,13 @@ pub async fn query_pypi(pages: usize) -> Result<Vec<Package>>{
 
     tokio::spawn(async move {
         for page_idx in (1..=pages).map(|i| i.to_string()) {
-            let query_params = vec![("q", "gitlab"), ("page", &page_idx)];
+            let query_params = vec![("q", &name), ("page", &page_idx)];
 
             let page_body = client.get("https://pypi.org/search/")
                 .query(&query_params)
                 .send()
                 .await;
-            tx.send(page_body).await;
-            
+            tx.send(page_body).await.expect("can send on package channel");
         }
     });
 

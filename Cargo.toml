@@ -1,13 +1,17 @@
 [package]
-name = "pipsearch"
+name = "pypi-search"
 version = "0.1.0"
-authors = ["Timm Behner <timm.behner@fkie.fraunhofer.de>"]
+authors = ["Timm Behner <behner@cs.uni-bonn.de>"]
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+license = "GPL-3.0-or-later"
+description = "Search the PyPI for packages by name aka `pip search`."
+homepage = "https://github.com/tbehner/pypi-search"
+repository = "https://github.com/tbehner/pypi-search"
+documentation = "https://github.com/tbehner/pypi-search"
+readme = "README.md"
 
 [[bin]]
-name = "pip-search"
+name = "pypi-search"
 path = "src/main.rs"
 test = false
 
@@ -19,6 +23,9 @@ anyhow = "*"
 scraper = "*"
 chrono = "0.4"
 lazy_static = "1.4"
+structopt = "0.3"
+clap = "*"
+tabled = "*"
 
 [dev-dependencies]
 criterion = "0.3"
