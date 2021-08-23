@@ -13,7 +13,7 @@ arg_enum! {
     }
 }
 
-/// A basic example
+/// Search PyPI for packages by name.
 #[derive(StructOpt, Debug)]
 struct Opt {
     #[structopt(short, long)]
