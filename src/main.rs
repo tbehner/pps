@@ -1,5 +1,5 @@
 use anyhow::Result;
-use pypi_search;
+use pps;
 use tabled::Table;
 use structopt::StructOpt;
 use clap::arg_enum;
@@ -35,7 +35,7 @@ struct Opt {
 #[tokio::main]
 async fn main() -> Result<()>{
     let opt = Opt::from_args();
-    let mut packages = pypi_search::query_pypi(opt.name.into(), opt.pages).await?;
+    let mut packages = pps::query_pypi(opt.name.into(), opt.pages).await?;
     match opt.sort_by {
         SortBy::Date => {packages.sort_by(|a, b| b.release.cmp(&a.release))},
         SortBy::Name => {packages.sort_by(|a, b| a.name.cmp(&b.name))},

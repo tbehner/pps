@@ -1002,6 +1002,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "pps"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "clap",
+ "criterion",
+ "lazy_static",
+ "reqwest",
+ "scraper",
+ "structopt",
+ "tabled",
+ "tokio",
+]
+
+[[package]]
 name = "ppv-lite86"
 version = "0.2.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1050,22 +1066,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5c7ed8b8c7b886ea3ed7dde405212185f423ab44682667c8c6dd14aa1d9f6612"
 dependencies = [
  "unicode-xid",
-]
-
-[[package]]
-name = "pypi-search"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "chrono",
- "clap",
- "criterion",
- "lazy_static",
- "reqwest",
- "scraper",
- "structopt",
- "tabled",
- "tokio",
 ]
 
 [[package]]

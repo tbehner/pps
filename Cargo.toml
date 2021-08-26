@@ -1,17 +1,17 @@
 [package]
-name = "pypi-search"
+name = "pps"
 version = "0.1.0"
 authors = ["Timm Behner <behner@cs.uni-bonn.de>"]
 edition = "2018"
 license = "GPL-3.0-or-later"
 description = "Search the PyPI for packages by name aka `pip search`."
-homepage = "https://github.com/tbehner/pypi-search"
-repository = "https://github.com/tbehner/pypi-search"
-documentation = "https://github.com/tbehner/pypi-search"
+homepage = "https://github.com/tbehner/pps"
+repository = "https://github.com/tbehner/pps"
+documentation = "https://docs.rs/pps/0.1.0/pps/"
 readme = "README.md"
 
 [[bin]]
-name = "pypi-search"
+name = "pps"
 path = "src/main.rs"
 test = false
 
