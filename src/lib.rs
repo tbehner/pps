@@ -1,10 +1,15 @@
+use std::fmt;
 use chrono::prelude::*;
 use std::convert::From;
 use lazy_static::lazy_static;
 use scraper::{Html, Selector, ElementRef};
 use tokio::sync::mpsc;
+use tokio::process::Command;
 use anyhow::Result;
 use tabled::Tabled;
+use serde::{Serialize, Deserialize};
+use serde_json::Value;
+use human_format;
 
 lazy_static! {
     static ref NAME_SELECTOR: Selector = Selector::parse("span.package-snippet__name").unwrap();
@@ -29,10 +34,69 @@ fn format_date(release: &DateTime<Utc>) -> String {
     release.format("%Y-%m-%d").to_string()
 }
 
+#[derive(Serialize,Deserialize,Debug)]
+pub struct Downloads {
+    last_day: u64,
+    last_week: u64,
+    last_month: u64,
+}
+
+impl fmt::Display for Downloads {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}, {}, {}", 
+            self.last_day, 
+            self.last_week, 
+            self.last_month
+            )
+    }
+}
+
+#[derive(Serialize,Deserialize)]
+struct DownloadsResponse {
+    data: Downloads,
+    package: String,
+    #[serde(rename(deserialize = "type", serialize = "type"))]
+    response_type: String,
+}
+
+
+#[derive(Debug, PartialEq)]
+pub struct LocalPackage {
+    pub name: String,
+    pub version: String,
+}
+
+impl LocalPackage {
+    fn from_str(input: &str) -> Result<LocalPackage> {
+        let fields: Vec<&str> = input.split_whitespace().collect();
+        Ok(LocalPackage{
+            name: fields[0].into(), 
+            version: fields[1].into()
+        })
+    }
+}
+
+fn display_installed(possible_version: &Option<String>) -> String {
+    possible_version
+        .as_ref()
+        .unwrap_or(&String::from(""))
+        .into()
+}
+
+fn display_downloads(possible_downloads: &Option<Downloads>) -> String {
+    match possible_downloads {
+        Some(d) => format!("{}", d),
+        None => "".into()
+    }
+}
+
 #[derive(Debug,Tabled)]
 pub struct Package {
     #[header("Name")]
     pub name: String,
+    #[header("Installed")]
+    #[field(display_with="display_installed")]
+    pub installed: Option<String>,
     #[header("Version")]
     pub version: String,
     #[header("Released")]
@@ -40,6 +104,9 @@ pub struct Package {
     pub release: DateTime<Utc>,
     #[header("Description")]
     pub description: String,
+    #[header("Downloads")]
+    #[field(display_with="display_downloads")]
+    pub downloads: Option<Downloads>,
 }
 
 impl From<&ElementRef<'_>> for Package {
@@ -47,10 +114,33 @@ impl From<&ElementRef<'_>> for Package {
         let release = unwrap_time_selector(input);
         Package{
             name: unwrap_selector(input, &NAME_SELECTOR),
+            installed: None,
             version: unwrap_selector(input, &VERSION_SELECTOR),
             release: release.unwrap(),
             description: unwrap_selector(input, &DESCRIPTION_SELECTOR),
+            downloads: None,
         }
+    }
+
+}
+
+impl Package {
+    pub fn local(&mut self, version: &str) {
+        self.installed = Some(version.into())
+    }
+
+    pub async fn update_downloads(&mut self) {
+        let url = format!("https://pypistats.org/api/packages/{}/recent", self.name);
+        dbg!(&url);
+        let body = reqwest::get(&url)
+            .await
+            .expect("some valid response")
+            .text()
+            .await
+            .expect("A JSON document");
+        dbg!(&body);
+        let data: DownloadsResponse = serde_json::from_str(&body).unwrap();
+        self.downloads = Some(data.data);
     }
 }
 
@@ -87,6 +177,30 @@ pub async fn query_pypi(name: String, pages: usize) -> Result<Vec<Package>>{
     Ok(packages)
 }
 
+pub async fn get_installed_packages() -> Result<Vec<LocalPackage>> {
+    let output = Command::new("pip")
+        .arg("list")
+        .arg("installed")
+        .output()
+        .await?;
+
+    let stdout: String = String::from_utf8(output.stdout)?;
+
+    let mut out = vec![];
+    for line in stdout.lines().skip(2) {
+        out.push(LocalPackage::from_str(line)?)
+    }
+    Ok(out)
+}
+
+pub async fn get_downloads(package_name: &str) -> Result<Downloads> {
+    let url = format!("https://pypistats.org/api/packages/{}/recent", package_name);
+    let data: DownloadsResponse = reqwest::get(&url)
+        .await?
+        .json()
+        .await?;
+    Ok(data.data)
+}
 
 #[cfg(test)]
 mod tests {
@@ -111,5 +225,19 @@ mod tests {
         assert_eq!(package.version, "0.5.8");
         assert_eq!(package.release, "2017-03-18T19:38:52+0000".parse::<DateTime<Utc>>().unwrap());
         assert_eq!(package.description, "GitLab API v3 Python Wrapper.");
+    }
+
+    #[tokio::test]
+    async fn get_installed_packages_test() {
+       let installed_packages = get_installed_packages().await.unwrap();
+       let pip_package = LocalPackage{ name: "pip".into(), version: "21.1.2".into() };
+       assert!(installed_packages.contains(&pip_package));
+    }
+
+    #[tokio::test]
+    async fn get_downloads_test() {
+        let package_name = "python-gitlab";
+        let downloads = get_downloads(package_name).await.unwrap();
+        assert!(downloads.last_month > 0);
     }
 }
