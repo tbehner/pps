@@ -8,10 +8,10 @@ use tokio::process::Command;
 use anyhow::Result;
 use tabled::Tabled;
 use serde::{Serialize, Deserialize};
-use serde_json::Value;
-use human_format;
+use thousands::Separable;
 use backoff::ExponentialBackoff;
 use backoff::future::retry;
+use std::cmp::Ordering;
 
 lazy_static! {
     static ref NAME_SELECTOR: Selector = Selector::parse("span.package-snippet__name").unwrap();
@@ -36,7 +36,7 @@ fn format_date(release: &DateTime<Utc>) -> String {
     release.format("%Y-%m-%d").to_string()
 }
 
-#[derive(Serialize,Deserialize,Debug)]
+#[derive(Serialize,Deserialize,Debug,PartialEq,Eq)]
 pub struct Downloads {
     last_day: u64,
     last_week: u64,
@@ -45,13 +45,26 @@ pub struct Downloads {
 
 impl fmt::Display for Downloads {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}, {}, {}", 
-            self.last_day, 
-            self.last_week, 
-            self.last_month
+        write!(f, "{} / {} / {}", 
+            self.last_day.separate_with_commas(), 
+            self.last_week.separate_with_commas(), 
+            self.last_month.separate_with_commas()
             )
     }
 }
+
+impl Ord for Downloads {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.last_month.cmp(&other.last_month)
+    }
+}
+
+impl PartialOrd for Downloads {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 
 #[derive(Serialize,Deserialize)]
 struct DownloadsResponse {
@@ -128,13 +141,11 @@ impl From<&ElementRef<'_>> for Package {
 
 async fn get_with_retry(url: &str) -> Result<String> {
      Ok(retry(ExponentialBackoff::default(), || async {
-            println!("Fetching {}", url);
             let body = reqwest::get(url)
                 .await?
                 .error_for_status()?
                 .text()
                 .await?;
-            dbg!(&body);
             Ok(body)
         }).await?)
 }
@@ -149,7 +160,6 @@ impl Package {
         let url = format!("https://pypistats.org/api/packages/{}/recent", self.name);
    
         let body: String = get_with_retry(&url).await.unwrap();
-        dbg!(&body);
         let data: DownloadsResponse = serde_json::from_str(&body).unwrap();
         self.downloads = Some(data.data);
     }

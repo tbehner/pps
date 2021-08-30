@@ -28,7 +28,7 @@ lazy_static = "1.4"
 structopt = "0.3"
 clap = "2"
 tabled = "0.2"
-human_format = "1"
+thousands = "0.2.0"
 futures = "0.3"
 backoff = { version = "0.3.0", features = ["futures", "tokio"]}
 

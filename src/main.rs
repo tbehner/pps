@@ -10,7 +10,8 @@ arg_enum! {
     enum SortBy {
         PyPI,
         Date,
-        Name
+        Name,
+        Downloads
     }
 }
 
@@ -42,7 +43,7 @@ async fn main() -> Result<()>{
     let mut packages = pps::query_pypi(opt.name.into(), opt.pages).await?;
     let local_packages = pps::get_installed_packages().await?;
 
-    if opt.downloads {
+    if opt.downloads || matches!(opt.sort_by, SortBy::Downloads) {
         join_all(packages.iter_mut().map(|pkg| pkg.update_downloads())).await;
     }
 
@@ -56,6 +57,7 @@ async fn main() -> Result<()>{
     match opt.sort_by {
         SortBy::Date => {packages.sort_by(|a, b| b.release.cmp(&a.release))},
         SortBy::Name => {packages.sort_by(|a, b| a.name.cmp(&b.name))},
+        SortBy::Downloads => {packages.sort_by(|a, b| b.downloads.cmp(&a.downloads))},
         _ => {},
     }
 
@@ -67,7 +69,7 @@ async fn main() -> Result<()>{
                 .with(tabled::Alignment::left())
         );
 
-    if !opt.downloads {
+    if !(opt.downloads || matches!(opt.sort_by, SortBy::Downloads)) {
         table = table.with(tabled::Disable::Column(5..));
     }
 
