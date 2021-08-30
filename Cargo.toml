@@ -1,6 +1,6 @@
 [package]
 name = "pps"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Timm Behner <behner@cs.uni-bonn.de>"]
 edition = "2018"
 license = "GPL-3.0-or-later"

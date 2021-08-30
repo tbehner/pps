@@ -157,7 +157,7 @@ impl Package {
 
     pub async fn update_downloads(&mut self) {
 
-        let url = format!("https://pypistats.org/api/packages/{}/recent", self.name);
+        let url = format!("https://pypistats.org/api/packages/{}/recent", self.name.to_lowercase());
    
         let body: String = get_with_retry(&url).await.unwrap();
         let data: DownloadsResponse = serde_json::from_str(&body).unwrap();
