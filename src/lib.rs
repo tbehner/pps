@@ -10,6 +10,8 @@ use tabled::Tabled;
 use serde::{Serialize, Deserialize};
 use serde_json::Value;
 use human_format;
+use backoff::ExponentialBackoff;
+use backoff::future::retry;
 
 lazy_static! {
     static ref NAME_SELECTOR: Selector = Selector::parse("span.package-snippet__name").unwrap();
@@ -124,20 +126,29 @@ impl From<&ElementRef<'_>> for Package {
 
 }
 
+async fn get_with_retry(url: &str) -> Result<String> {
+     Ok(retry(ExponentialBackoff::default(), || async {
+            println!("Fetching {}", url);
+            let body = reqwest::get(url)
+                .await?
+                .error_for_status()?
+                .text()
+                .await?;
+            dbg!(&body);
+            Ok(body)
+        }).await?)
+}
+
 impl Package {
     pub fn local(&mut self, version: &str) {
         self.installed = Some(version.into())
     }
 
     pub async fn update_downloads(&mut self) {
+
         let url = format!("https://pypistats.org/api/packages/{}/recent", self.name);
-        dbg!(&url);
-        let body = reqwest::get(&url)
-            .await
-            .expect("some valid response")
-            .text()
-            .await
-            .expect("A JSON document");
+   
+        let body: String = get_with_retry(&url).await.unwrap();
         dbg!(&body);
         let data: DownloadsResponse = serde_json::from_str(&body).unwrap();
         self.downloads = Some(data.data);
