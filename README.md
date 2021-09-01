@@ -20,7 +20,7 @@ Also the output is unnecessary hard to process by other command line tools.
 or get a pre-build linux x86-64 release 
 
 ```bash
-mkdir -p ~/.local/bin && wget https://github.com/tbehner/pps/releases/download/0.2.1/pps -o ~/.local/bin/pps
+mkdir -p ~/.local/bin && wget https://github.com/tbehner/pps/releases/download/0.2.1/pps -O ~/.local/bin/pps && chmod +x ~/.local/bin/pps
 ```
 
 and make sure to include `~/.local/bin` on your `PATH`.
